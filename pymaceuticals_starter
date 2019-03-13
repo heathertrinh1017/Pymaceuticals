@@ -1,0 +1,319 @@
+# Dependencies and Setup
+get_ipython().run_line_magic('matplotlib', 'inline')
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from scipy.stats import sem
+
+# Hide warning messages in notebook
+import warnings
+warnings.filterwarnings('ignore')
+
+# File to Load (Remember to Change These)
+mouse_drug_datacsv = "data/mouse_drug_data.csv"
+clinicaltrialcsv = "data/clinicaltrial_data.csv"
+
+# Read the Mouse and Drug Data and the Clinical Trial Data
+mousedrug = pd.read_csv(mouse_drug_datacsv)
+clinicaltrial = pd.read_csv(clinicaltrialcsv)
+# Combine the data into a single dataset
+mousedrug_clinicaltrial = pd.merge(mousedrug,clinicaltrial,on='Mouse ID')
+
+# Display the data table for preview
+mousedrug_clinicaltrial.head()
+
+
+# ## Tumor Response to Treatment
+
+# In[108]:
+
+
+# Store the Mean Tumor Volume Data Grouped by Drug and Timepoint 
+tumor_response = mousedrug_clinicaltrial.groupby(['Drug','Timepoint'])
+tumor_mean = tumor_response['Tumor Volume (mm3)'].mean()
+# Convert to DataFrame
+tumormean_df = pd.DataFrame(tumor_mean)
+# Preview DataFrame
+tumormean_df.head()
+
+
+# In[109]:
+
+
+tumor_response = mousedrug_clinicaltrial.groupby(['Drug','Timepoint'])
+tumor_sem = pd.DataFrame(tumor_response['Tumor Volume (mm3)'].sem()).reset_index()
+tumor_sem.head()
+
+
+# In[110]:
+
+
+tumormean_pivot = pd.pivot_table(tumormean_df, values='Tumor Volume (mm3)', index=['Timepoint'],columns=['Drug'])
+tumormean_pivot.head()
+
+
+# In[111]:
+
+
+time = tumormean_pivot.index.tolist()
+
+
+# In[112]:
+
+
+capomulin = tumormean_pivot['Capomulin']
+infubinol = tumormean_pivot['Infubinol']
+ketapril = tumormean_pivot['Ketapril']
+placebo = tumormean_pivot['Placebo']
+
+
+# In[113]:
+
+
+sems_pivot = tumor_sem.pivot(index='Timepoint', columns='Drug', values='Tumor Volume (mm3)')
+semsc = sems_pivot['Capomulin']
+semsi = sems_pivot['Infubinol']
+semsk = sems_pivot['Ketapril']
+semsp = sems_pivot['Placebo']
+
+
+# In[114]:
+
+
+sems_pivot.head()
+
+
+# In[146]:
+
+
+# Generate the Plot (with Error Bars)
+plt.errorbar(time, capomulin, yerr=semsc, marker="o", color="red", linestyle=':')
+plt.errorbar(time, infubinol, yerr=semsi, marker="^", color="green", linestyle=':')
+plt.errorbar(time, ketapril, yerr=semsk, marker=".", color="orange", linestyle=':')
+plt.errorbar(time, placebo, yerr=semsp, marker="x", color="purple", linestyle=':')
+plt.title("Tumor Response to Treatment")
+plt.xlabel("Time (Days)")
+plt.ylabel("Tumor Volume (mm3)")
+plt.legend(loc="upperleft")
+plt.grid()
+
+plt.savefig('tumor_response.png')
+plt.show()
+
+
+# ## Metastatic Response to Treatment
+
+# In[147]:
+
+
+# Store the Mean Met. Site Data Grouped by Drug and Timepoint 
+metresponse = mousedrug_clinicaltrial.groupby(['Drug','Timepoint'])
+metresponsemean = pd.DataFrame(metresponse['Metastatic Sites'].mean())
+metresponsemean.head()
+# Convert to DataFrame
+
+# Preview DataFrame
+
+
+# In[94]:
+
+
+met_pivot = pd.pivot_table(metresponsemean, values='Metastatic Sites', index=['Timepoint'],columns=['Drug'])
+met_pivot.head()
+
+
+# In[95]:
+
+
+# Store the Standard Error of Metastatic Volumes Grouped by Drug and Timepoint
+sems_metastatic = mousedrug_clinicaltrial.groupby(['Drug', 'Timepoint'])['Metastatic Sites'].sem().reset_index()
+
+# Convert to DataFrame
+sems_metastatic_table = pd.DataFrame(sems_metastatic)
+
+# Preview DataFrame
+sems_metastatic_table.head()
+
+
+# In[96]:
+
+
+time = met_pivot.index.tolist()
+
+
+# In[97]:
+
+
+capomulin = met_pivot['Capomulin']
+infubinol = met_pivot['Infubinol']
+ketapril = met_pivot['Ketapril']
+placebo = met_pivot['Placebo']
+
+
+# In[98]:
+
+
+metasems2 = sems_metastatic_table.pivot(index='Timepoint', columns='Drug', values='Metastatic Sites')
+
+metasems2
+
+
+# In[103]:
+
+
+metc = metasems2['Capomulin']
+meti = metasems2['Infubinol']
+metk = metasems2['Ketapril']
+metp = metasems2['Placebo']
+
+
+# In[104]:
+
+
+met2_pivot.head()
+
+
+# In[117]:
+
+
+plt.errorbar(time, capomulin, yerr=metc, marker="o", color="red",linestyle=':')
+plt.errorbar(time, infubinol, yerr=meti, marker="^", color="green",linestyle=':')
+plt.errorbar(time, ketapril, yerr=metk, marker=".", color="orange",linestyle=':')
+plt.errorbar(time, placebo, yerr=metp, marker="x", color="purple",linestyle=':')
+plt.title("Metastatic Response to Treatment")
+plt.xlabel("Time (Days)")
+plt.ylabel("Metastatic Sites")
+plt.legend(loc="upperleft")
+plt.grid()
+
+plt.savefig('metastatic_response.png')
+plt.show()
+
+
+# ## Survival Rates
+
+# In[118]:
+
+
+# Store the Count of Mice Grouped by Drug and Timepoint (W can pass any metric)
+mouse_grouped_df = mousedrug_clinicaltrial.groupby(['Drug','Timepoint'])['Mouse ID']
+mousecount_df = mouse_grouped_df.nunique()
+
+# Convert to DataFrame
+mousecount_df = pd.DataFrame(mousecount_df).rename(columns={'Mouse ID':'Mouse Count'})
+
+
+# Preview DataFrame
+
+mousecount_df.head()
+
+
+# In[119]:
+
+
+# Minor Data Munging to Re-Format the Data Frames
+
+# Preview the Data Frame
+mousecount_format = mousecount_df.unstack(0)
+mousecount_format = mousecount_format["Mouse Count"]
+mousecount_format.head()
+
+
+# In[120]:
+
+
+# Generate the Plot (Accounting for percentages)
+plt.figure(figsize=(10,6))
+plt.plot(np.arange(0, 50, 5), mousecount_df.loc["Capomulin", "Mouse Count"]/25*100,
+         marker = '^', label = "Capomulin", linestyle =':',color='k')
+plt.plot(np.arange(0, 50, 5), mousecount_df.loc["Ketapril", "Mouse Count"]/25*100,
+         marker = 's', label = "Ketapril", linestyle = ':',color='m')
+plt.plot(np.arange(0, 50, 5), mousecount_df.loc["Placebo", "Mouse Count"]/25*100,
+         marker = 'x', label = "Placebo", linestyle =':',color='b')
+plt.plot(np.arange(0, 50, 5), mousecount_df.loc["Infubinol", "Mouse Count"]/25*100,
+         marker = 'P', label = "Infubinol", linestyle =':',color='c')
+
+
+plt.grid()
+plt.title('Survival During Treatment')
+plt.xlabel('Time(Days)')
+plt.ylabel('Survival Rate(%)')
+plt.legend(loc='lower left')
+
+
+# Save the Figure
+plt.savefig('survivalrate.png')
+
+# Show the Figure
+plt.show()
+
+
+# ## Summary Bar Graph
+
+# In[23]:
+
+
+tumormean_pivot
+
+
+# In[24]:
+
+
+# Calculate the percent changes for each drug
+tumorchange = (tumormean_pivot.loc[45,:] - tumormean_pivot.loc[0, :])/tumormean_pivot.loc[0, :] * 100
+# Display the data to confirm
+tumorchange
+
+
+# In[25]:
+
+
+# Store all Relevant Percent Changes into a Tuple
+percentchange = (tumorchange['Capomulin'],tumorchange['Infubinol'],tumorchange['Ketapril'],tumorchange['Placebo'])
+
+
+# In[145]:
+
+
+fig, ax = plt.subplots()
+index = np.arange(len(percentchange))  
+width = 1
+
+# Splice the data between passing and failing drugs
+drugs_pass = plt.bar(index[0], percentchange[0], width, color='green')
+drugs_fail = plt.bar(index[1:], percentchange[1:], width, color='red')
+
+# Orient widths. Add labels, tick marks, etc. 
+plt.title('Tumor Change Over 45 Day Treatment')
+plt.ylabel('% Tumor Volume Change')
+ax.set_xticks(index)
+ax.set_xticklabels(('Capomulin','Infubinol','Ketapril','Placebo'))
+plt.grid()
+
+
+# Use functions to label the percentages of changes
+def percentfail(drugs):
+    for drug in drugs_fail:
+        height = drug.get_height()
+        plt.text(drug.get_x() + drug.get_width()/2., 3,
+                '%d' % int(height) + "%",
+                ha='center', va='bottom', color="white")      
+percentfail(drugs_fail)
+
+
+def percentpass(drugs):
+    for drug in drugs_pass:
+        height = drug.get_height()
+        plt.text(drug.get_x() + drug.get_width()/2., -6,
+                '%d' % int(height) + "%",
+                 ha='center', va='bottom', color="white")
+        
+# Call functions to implement the function calls
+percentpass(drugs_pass)
+percentfail(drugs_fail)
+
+
+plt.tight_layout()
+plt.savefig("tumor_percent_change.png")
+plt.show()
+
